@@ -131,6 +131,16 @@ Hyperparameter optimisation was performed using **Optuna** where feasible. Each 
 
 ---
 
+## Individual Contributions
+
+This project was developed as a collaborative research effort. My primary contributions included:
+
+* Designing and refining the end-to-end atmospheric retrieval pipeline, including data preprocessing, feature engineering, and model evaluation workflows.
+* Training, tuning, and benchmarking the XGBoost and Support Vector Regression (SVR) models for atmospheric gas abundance and temperature retrieval tasks.
+* Evaluating model generalization on real JWST NIRSpec observations of WASP-39b.
+* Analyzing the impact of preprocessing strategies (normalization, feature augmentation, and target transformations) on model stability and retrieval performance.
+* Contributing to experimental design, result interpretation, and overall project planning and execution.
+
 ## 🛠️ Tech Stack
 
 - **Python 3.8+**
