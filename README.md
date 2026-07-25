@@ -1,160 +1,198 @@
-# 🌌 Exoplanet Atmospheric Retrieval using Machine Learning
+# Exoplanet Atmospheric Retrieval using Machine Learning
 
-ML-based atmospheric retrieval from exoplanet transmission spectra — benchmarking MLP, SVR, and XGBoost on the Ariel Big Data Challenge dataset and real JWST observations of WASP-39b.
+ML-based atmospheric retrieval from exoplanet transmission spectra, benchmarking MLP, SVR, and XGBoost on the Ariel Big Data Challenge dataset and real JWST observations of WASP-39b.
 
-[![Python](https://img.shields.io/badge/Python-3.8%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
-[![Jupyter](https://img.shields.io/badge/Jupyter-Notebook-F37626?style=for-the-badge&logo=jupyter&logoColor=white)](https://jupyter.org)
-[![XGBoost](https://img.shields.io/badge/XGBoost-Regression-189AB4?style=for-the-badge)](https://xgboost.readthedocs.io)
-[![scikit-learn](https://img.shields.io/badge/scikit--learn-ML-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=white)](https://scikit-learn.org)
+Python 3.8+ | scikit-learn, XGBoost, Optuna | Jupyter Notebook
 
 ---
 
-## 📌 Overview
+## Workflow
 
-Atmospheric retrieval — inferring what gases and temperatures exist in a planet's atmosphere from its light spectrum — is traditionally a computationally expensive Bayesian problem, often taking hours or days per planet. This project investigates whether supervised machine learning regressors can solve the same inverse problem in a fraction of the time.
+Based on the system architecture used for both prediction targets (Fig. 1 in the accompanying paper).
 
-Models are trained on the **Ariel Big Data Challenge (ABC)** synthetic dataset and then tested against real **JWST NIRSpec observations of WASP-39b** — one of the best-characterised hot Jupiters and the first exoplanet to have its atmospheric chemistry confirmed by the James Webb Space Telescope.
+```
+DATA INGESTION                                  JWST NIRSpec/PRISM - WASP-39b
+  ABC synthetic spectra (5,900 planets)
+  train/test split, fixed seed                    EXTRACT_1D FITS, 0.6-5.3 micron
+         |                                               |
+         v                                               v
+PREPROCESSING                                   Cubic spline interpolation to
+  Sample-wise normalization (N)                   common 52-bin wavelength grid
+  + 4 variants: NMS, NM, NMM, S
+         |                                               |
+         v                                               |
+HYPERPARAMETER TUNING
+  XGBoost + MLP  -> Optuna (Bayesian)                    |
+  SVR            -> randomized search                    |
+         |                                               |
+         v                                               |
+MODEL TRAINING (5 preprocessing x 3 models)              |
+  XGBoost(N / NMS / NM / NMM / S)                        |
+  MLP(N / NMS / NM / NMM / S)                            |
+  SVR(N / NMS / NM / NMM / S)                            |
+         |                                               |
+         +-------------------------+---------------------+
+                                   |
+                                   v
+                            EVALUATION
+                R2 / MAE / RMSE on ABC synthetic test set
+                Inference on real WASP-39b spectrum
+                                   |
+                                   v
+                Compare gas abundances + temperature
+                against published JWST retrievals
+                (Constantinou et al., Ahrer et al., Alderson et al.)
+```
+
 
 ---
 
-## 🔭 Research Objective
+## Project Structure
+
+```
+Exoplanet-Atmospheric-Retrieval/
+├── Data Visualization/              Spectral plots and result visualisations
+├── Dataset Verification/            Sanity checks on input data
+├── Extraction of ABC data/          Loading and parsing the ABC dataset
+├── Extraction of ABC features/      Feature engineering on ABC spectra
+├── Extraction of WASP-39B data/     Loading JWST NIRSpec observational data
+├── Preprocessing of WASP-39B data/  Aligning WASP-39b spectra to model input format
+├── Model Training Gases/            Regressor training for gas abundance targets
+├── Model Training Temperature/      Regressor training for temperature targets
+└── README.md
+```
+
+---
+
+## Overview
+
+Atmospheric retrieval, inferring what gases and temperatures exist in a planet's atmosphere from its light spectrum, is traditionally a computationally expensive Bayesian problem, often taking hours or days per planet. This project investigates whether supervised machine learning regressors can solve the same inverse problem in a fraction of the time.
+
+Models are trained on the Ariel Big Data Challenge (ABC) synthetic dataset and then tested against real JWST NIRSpec observations of WASP-39b, one of the best-characterised hot Jupiters and the first exoplanet to have its atmospheric chemistry confirmed by the James Webb Space Telescope.
+
+---
+
+## Research Objective
 
 Evaluate and compare classical and neural ML regressors for estimating:
 
-- **Atmospheric gas abundances** — H₂O, CO₂, CO, CH₄, NH₃
-- **Planetary equilibrium temperature**
+- Atmospheric gas abundances: H2O, CO2, CO, CH4, NH3
+- Planetary equilibrium temperature
 
 directly from transmission spectra, and assess how preprocessing choices affect model stability and generalisation across synthetic and real observational data.
 
 ---
 
-## 📁 Project Structure
-
-```
-Exoplanet-Atmospheric-Retrieval/
-│
-├── 📂 Data Visualization/              # Spectral plots and result visualisations
-├── 📂 Dataset Verification/            # Sanity checks on input data
-│
-├── 📂 Extraction of ABC data/          # Loading and parsing the ABC dataset
-├── 📂 Extraction of ABC features/      # Feature engineering on ABC spectra
-│
-├── 📂 Extraction of WASP-39B data/     # Loading JWST NIRSpec observational data
-├── 📂 Preprocessing of WASP-39B data/  # Aligning WASP-39b spectra to model input format
-│
-├── 📂 Model Training Gases/            # Regressor training for gas abundance targets
-├── 📂 Model Training Temperature/      # Regressor training for temperature targets
-│
-└── 📖 README.md
-```
-
----
-
-## 🗂️ Datasets
+## Datasets
 
 ### Ariel Big Data Challenge (ABC) Dataset
+
 Synthetic transmission spectra generated from radiative transfer simulations, covering a wide range of planetary atmospheric compositions. Used for all model training and validation. The dataset was released as part of the ESA Ariel mission's ML challenge to accelerate atmospheric retrieval at scale.
 
 ### JWST NIRSpec — WASP-39b
-Real observational spectra from the James Webb Space Telescope's NIRSpec instrument, targeting WASP-39b — a hot Saturn-mass planet orbiting a sun-like star ~700 light-years away. WASP-39b is the benchmark planet for atmospheric studies; JWST confirmed the presence of CO₂, CO, H₂O, SO₂, and other molecules in its atmosphere in 2022–2023. These observations serve as the out-of-distribution generalisation test for the trained models.
+
+Real observational spectra from the James Webb Space Telescope's NIRSpec instrument, targeting WASP-39b, a hot Saturn-mass planet orbiting a sun-like star roughly 700 light-years away. WASP-39b is the benchmark planet for atmospheric studies; JWST confirmed the presence of CO2, CO, H2O, SO2, and other molecules in its atmosphere in 2022–2023. These observations serve as the out-of-distribution generalisation test for the trained models.
 
 ---
 
-## ⚙️ Preprocessing Pipeline
+## Preprocessing Pipeline
 
-Preprocessing was found to have a **dominant impact** on model performance — in some cases more than the choice of model itself.
+Preprocessing was found to have a dominant impact on model performance, in some cases more than the choice of model itself.
 
 | Step | Description |
 |---|---|
-| **Wavelength Interpolation** | Spectra resampled to a common 52-bin wavelength grid for consistent input dimensionality |
-| **Feature Augmentation** | Statistical descriptors (mean, std, gradients) added to the raw spectral bins |
-| **Log-Scaling of Targets** | Gas abundances are inherently log-distributed; log-transform stabilises regression |
-| **Sample-wise Normalisation** | Applied per-spectrum to remove flux offset variation between observations |
+| Wavelength Interpolation | Spectra resampled to a common 52-bin wavelength grid for consistent input dimensionality |
+| Feature Augmentation | Statistical descriptors (mean, std, gradients) added to the raw spectral bins |
+| Log-Scaling of Targets | Gas abundances are inherently log-distributed; log-transform stabilises regression |
+| Sample-wise Normalisation | Applied per-spectrum to remove flux offset variation between observations |
 
-> ⚠️ **Key finding:** Standard (z-score) scaling of targets led to collapsed or unstable models. Log-scaling of gas abundances was essential for meaningful predictions.
+Key finding: standard (z-score) scaling of targets led to collapsed or unstable models. Log-scaling of gas abundances was essential for meaningful predictions.
 
 ---
 
-## 🤖 Models
+## Models
 
 Three supervised regressors were implemented and benchmarked under identical preprocessing conditions:
 
 | Model | Notes |
 |---|---|
-| **Multi-Layer Perceptron (MLP)** | Fully connected neural network; sensitive to scaling choices |
-| **Support Vector Regression (SVR)** | Kernel-based; effective for small-to-medium data regimes |
-| **XGBoost Regression** | Gradient-boosted trees; most stable across both datasets |
+| Multi-Layer Perceptron (MLP) | Fully connected neural network; sensitive to scaling choices |
+| Support Vector Regression (SVR) | Kernel-based; effective for small-to-medium data regimes |
+| XGBoost Regression | Gradient-boosted trees; most stable across both datasets |
 
-Hyperparameter optimisation was performed using **Optuna** where feasible. Each model was trained separately for gas abundance targets and temperature.
+Hyperparameter optimisation was performed using Optuna where feasible. Each model was trained separately for gas abundance targets and temperature.
 
 ---
 
-## 📊 Results
+## Results
 
-### Gas Abundance Predictions on WASP-39b (XGBoost — best model)
+### Gas Abundance Predictions on WASP-39b (XGBoost, best model)
 
 | Gas | XGB (N) Predicted | Published Reference | Source |
 |---|---|---|---|
-| log H₂O | −5.99 | −4.85 ± 0.38 | Constantinou et al. |
-| log CO₂ | −6.35 | −6.59 to −4.16 | Constantinou et al. |
-| log CO | −3.99 | −4.25 to −2.58 | Constantinou et al. |
-| log CH₄ | −4.76 | < −5.3 | Ahrer et al. |
-| log NH₃ | −6.46 | < −6 | Alderson et al. |
+| log H2O | -5.99 | -4.85 ± 0.38 | Constantinou et al. |
+| log CO2 | -6.35 | -6.59 to -4.16 | Constantinou et al. |
+| log CO | -3.99 | -4.25 to -2.58 | Constantinou et al. |
+| log CH4 | -4.76 | < -5.3 | Ahrer et al. |
+| log NH3 | -6.46 | < -6 | Alderson et al. |
 
 ### Temperature Prediction on WASP-39b
 
 | Model | Preprocessing | Predicted Temp (K) | Actual Temp (K) |
 |---|---|---|---|
-| XGBoost | NMM | **958.40 K** | ~1100 K |
+| XGBoost | NMM | 958.40 K | ~1100 K |
 | SVR | N | 102.91 K | ~1100 K |
-| MLP | N | Collapsed (R² ≈ −0.99) | ~1100 K |
+| MLP | N | Collapsed (R2 ≈ -0.99) | ~1100 K |
 
 ### Impact of Preprocessing on Model Stability
 
 | Preprocessing | XGB | SVR | MLP |
 |---|---|---|---|
-| N (Z-score, sample-wise) | ✅ Stable | ✅ Stable | ✅ R² ≈ 0.99 |
-| NMS (N + stats augmentation) | ✅ Stable | ✅ Stable | ✅ Stable |
-| NM (Max normalisation) | ⚠️ Degraded | ⚠️ Degraded | ⚠️ R² 0.6–0.9 |
-| NMM (NM + augmentation) | ⚠️ Degraded | ⚠️ Degraded | ⚠️ Degraded |
-| S (Global standardisation) | ❌ Collapsed | ❌ Collapsed | ❌ Collapsed |
+| N (Z-score, sample-wise) | Stable | Stable | R2 ≈ 0.99 |
+| NMS (N + stats augmentation) | Stable | Stable | Stable |
+| NM (Max normalisation) | Degraded | Degraded | R2 0.6–0.9 |
+| NMM (NM + augmentation) | Degraded | Degraded | Degraded |
+| S (Global standardisation) | Collapsed | Collapsed | Collapsed |
 
-> **Key finding:** Global standardisation caused complete model collapse across all architectures — compressing the dynamic range of spectral absorption features destroys the signal. Sample-wise normalisation (N/NMS) is essential.
+Key finding: global standardisation caused complete model collapse across all architectures, compressing the dynamic range of spectral absorption features and destroying the signal. Sample-wise normalisation (N/NMS) is essential.
 
 ### Summary
 
-- Preprocessing choices dominated model behaviour more than architectural differences
-- **XGBoost** was the only model that both performed well on synthetic data *and* generalised to real JWST observations
-- MLP achieved the highest R² on synthetic validation (≈ 0.99) but failed to generalise to WASP-39b
-- SVR was stable for temperature but unreliable for gas abundances
-- XGBoost predictions for all five gases showed qualitative agreement with published JWST retrieval analyses
+- Preprocessing choices dominated model behaviour more than architectural differences.
+- XGBoost was the only model that both performed well on synthetic data and generalised to real JWST observations.
+- MLP achieved the highest R2 on synthetic validation (approximately 0.99) but failed to generalise to WASP-39b.
+- SVR was stable for temperature but unreliable for gas abundances.
+- XGBoost predictions for all five gases showed qualitative agreement with published JWST retrieval analyses.
 
 ---
 
 ## Individual Contributions
 
-> Note: This repository is forked from the original team repository and reflects my contributions to the project. 
+Note: this repository is forked from the original team repository and reflects my contributions to the project.
+
 My primary contributions included:
 
-* Designing and refining the end-to-end atmospheric retrieval pipeline, including data preprocessing, feature engineering, and model evaluation workflows.
-* Training, tuning, and benchmarking the XGBoost and Support Vector Regression (SVR) models for atmospheric gas abundance and temperature retrieval tasks.
-* Evaluating model generalization on real JWST NIRSpec observations of WASP-39b.
-* Analyzing the impact of preprocessing strategies (normalization, feature augmentation, and target transformations) on model stability and retrieval performance.
-* Contributing to experimental design, result interpretation, and overall project planning and execution.
-
-## 🛠️ Tech Stack
-
-- **Python 3.8+**
-- **Scikit-learn** — MLP, SVR, preprocessing pipelines
-- **XGBoost** — gradient-boosted regression
-- **Optuna** — hyperparameter optimisation
-- **NumPy & Pandas** — data handling
-- **Matplotlib** — visualisation
-- **Jupyter Notebook** — experiments and analysis
+- Designing and refining the end-to-end atmospheric retrieval pipeline, including data preprocessing, feature engineering, and model evaluation workflows.
+- Training, tuning, and benchmarking the XGBoost and Support Vector Regression (SVR) models for atmospheric gas abundance and temperature retrieval tasks.
+- Evaluating model generalisation on real JWST NIRSpec observations of WASP-39b.
+- Analysing the impact of preprocessing strategies (normalisation, feature augmentation, and target transformations) on model stability and retrieval performance.
+- Contributing to experimental design, result interpretation, and overall project planning and execution.
 
 ---
 
-## 🚀 Getting Started
+## Tech Stack
+
+- Python 3.8+
+- Scikit-learn — MLP, SVR, preprocessing pipelines
+- XGBoost — gradient-boosted regression
+- Optuna — hyperparameter optimisation
+- NumPy and Pandas — data handling
+- Matplotlib — visualisation
+- Jupyter Notebook — experiments and analysis
+
+---
+
+## Getting Started
 
 ### 1. Clone the repository
 
@@ -171,17 +209,17 @@ pip install numpy pandas scikit-learn xgboost optuna matplotlib jupyterlab
 
 ### 3. Run the notebooks
 
-Open any folder in order — a suggested flow:
+Open any folder in order; a suggested flow:
 
 ```
-1. Extraction of ABC data        → Load and explore the training dataset
-2. Dataset Verification          → Confirm data integrity
-3. Extraction of ABC features    → Build feature vectors from spectra
-4. Model Training Gases          → Train and evaluate gas abundance models
-5. Model Training Temperature    → Train and evaluate temperature model
-6. Extraction of WASP-39B data   → Load real JWST observations
-7. Preprocessing of WASP-39B data→ Align to model input format
-8. Data Visualization            → Inspect predictions vs. published results
+1. Extraction of ABC data         Load and explore the training dataset
+2. Dataset Verification           Confirm data integrity
+3. Extraction of ABC features     Build feature vectors from spectra
+4. Model Training Gases           Train and evaluate gas abundance models
+5. Model Training Temperature     Train and evaluate temperature model
+6. Extraction of WASP-39B data    Load real JWST observations
+7. Preprocessing of WASP-39B data Align to model input format
+8. Data Visualization             Inspect predictions vs. published results
 ```
 
 ```bash
@@ -190,13 +228,12 @@ jupyter lab
 
 ---
 
+## About
 
-## 👥 About
-
-Developed by students of the **Department of Information Science & Engineering, BMS College of Engineering (BMSCE), Bengaluru** as part of an academic research project in the intersection of astrophysics and machine learning.
+Developed by students of the Department of Information Science and Engineering, BMS College of Engineering (BMSCE), Bengaluru, as part of an academic research project at the intersection of astrophysics and machine learning.
 
 ---
 
-## 📄 License
+## License
 
 MIT License
